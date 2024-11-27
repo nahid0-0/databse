@@ -1,0 +1,347 @@
+-- User Table
+CREATE TABLE User (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    profile_picture VARCHAR(255),
+    bio TEXT,
+    join_date DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Server Table
+CREATE TABLE Server (
+    server_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    created_by INT,
+    created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES User(user_id) ON DELETE SET NULL
+);
+
+-- Channel Table
+CREATE TABLE Channel (
+    channel_id INT AUTO_INCREMENT PRIMARY KEY,
+    server_id INT,
+    name VARCHAR(100) NOT NULL,
+    channel_type ENUM('text', 'voice') NOT NULL,
+    created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (server_id) REFERENCES Server(server_id) ON DELETE CASCADE
+);
+
+-- Post Table
+CREATE TABLE Post (
+    post_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    channel_id INT,
+    title VARCHAR(200),
+    content TEXT,
+    created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES User(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (channel_id) REFERENCES Channel(channel_id) ON DELETE CASCADE
+);
+
+-- Comment Table
+CREATE TABLE Comment (
+    comment_id INT AUTO_INCREMENT PRIMARY KEY,
+    post_id INT,
+    user_id INT,
+    content TEXT NOT NULL,
+    created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (post_id) REFERENCES Post(post_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES User(user_id) ON DELETE CASCADE
+);
+
+-- Reaction Table
+CREATE TABLE Reaction (
+    reaction_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    reaction_type ENUM('like', 'dislike', 'love', 'haha', 'sad', 'angry'),
+    FOREIGN KEY (user_id) REFERENCES User(user_id) ON DELETE CASCADE
+);
+
+-- Message Table
+CREATE TABLE Message (
+    message_id INT AUTO_INCREMENT PRIMARY KEY,
+    channel_id INT,
+    user_id INT,
+    content TEXT NOT NULL,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (channel_id) REFERENCES Channel(channel_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES User(user_id) ON DELETE CASCADE
+);
+
+-- Role Table
+CREATE TABLE Role (
+    role_id INT AUTO_INCREMENT PRIMARY KEY,
+    server_id INT,
+    role_name VARCHAR(100),
+    permissions TEXT,
+    FOREIGN KEY (server_id) REFERENCES Server(server_id) ON DELETE CASCADE
+);
+
+-- User_Roles Table
+CREATE TABLE User_Roles (
+    user_id INT,
+    server_id INT,
+    role_id INT,
+    FOREIGN KEY (user_id) REFERENCES User(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (server_id) REFERENCES Server(server_id) ON DELETE CASCADE,
+    FOREIGN KEY (role_id) REFERENCES Role(role_id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, server_id, role_id)
+);
+
+-- Group Table
+CREATE TABLE `Group` (
+    group_id INT AUTO_INCREMENT PRIMARY KEY,
+    server_id INT,
+    name VARCHAR(100),
+    created_by INT,
+    created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (server_id) REFERENCES Server(server_id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES User(user_id) ON DELETE SET NULL
+);
+
+-- User_Groups Table
+CREATE TABLE User_Groups (
+    user_id INT,
+    group_id INT,
+    joined_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES User(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (group_id) REFERENCES `Group`(group_id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, group_id)
+);
+
+-- Notification Table
+CREATE TABLE Notification (
+    notification_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    content TEXT NOT NULL,
+    read_status BOOLEAN DEFAULT FALSE,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES User(user_id) ON DELETE CASCADE
+);
+
+-- Tag Table
+CREATE TABLE Tag (
+    tag_id INT AUTO_INCREMENT PRIMARY KEY,
+    tag_name VARCHAR(50) NOT NULL UNIQUE
+);
+
+-- Post_Tags Table
+CREATE TABLE Post_Tags (
+    post_id INT,
+    tag_id INT,
+    FOREIGN KEY (post_id) REFERENCES Post(post_id) ON DELETE CASCADE,
+    FOREIGN KEY (tag_id) REFERENCES Tag(tag_id) ON DELETE CASCADE,
+    PRIMARY KEY (post_id, tag_id)
+);
+
+-- Blocked_Users Table
+CREATE TABLE Blocked_Users (
+    blocker_id INT,
+    blocked_id INT,
+    block_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (blocker_id) REFERENCES User(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (blocked_id) REFERENCES User(user_id) ON DELETE CASCADE,
+    PRIMARY KEY (blocker_id, blocked_id)
+);
+
+-- Friendship Table
+CREATE TABLE Friendship (
+    user1_id INT,
+    user2_id INT,
+    status ENUM('pending', 'accepted', 'rejected', 'blocked') NOT NULL,
+    created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user1_id) REFERENCES User(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (user2_id) REFERENCES User(user_id) ON DELETE CASCADE,
+    PRIMARY KEY (user1_id, user2_id)
+);
+
+-- Attachment Table
+CREATE TABLE Attachment (
+    attachment_id INT AUTO_INCREMENT PRIMARY KEY,
+    message_id INT,
+    file_path VARCHAR(255),
+    file_type VARCHAR(50),
+    uploaded_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (message_id) REFERENCES Message(message_id) ON DELETE CASCADE
+);
+
+-- Poll Table
+CREATE TABLE Poll (
+    poll_id INT AUTO_INCREMENT PRIMARY KEY,
+    post_id INT,
+    question TEXT NOT NULL,
+    created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    expiration_date DATETIME,
+    FOREIGN KEY (post_id) REFERENCES Post(post_id) ON DELETE CASCADE
+);
+
+-- Poll_Option Table
+CREATE TABLE Poll_Option (
+    option_id INT AUTO_INCREMENT PRIMARY KEY,
+    poll_id INT,
+    option_text VARCHAR(255),
+    FOREIGN KEY (poll_id) REFERENCES Poll(poll_id) ON DELETE CASCADE
+);
+
+-- Poll_Vote Table
+CREATE TABLE Poll_Vote (
+    poll_id INT,
+    option_id INT,
+    user_id INT,
+    vote_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (poll_id) REFERENCES Poll(poll_id) ON DELETE CASCADE,
+    FOREIGN KEY (option_id) REFERENCES Poll_Option(option_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES User(user_id) ON DELETE CASCADE,
+    PRIMARY KEY (poll_id, option_id, user_id)
+);
+
+-- Insert into User
+INSERT INTO User (username, email, password_hash, profile_picture, bio) 
+VALUES 
+('Alice', 'alice@example.com', 'hashed_password_1', 'alice.jpg', 'Bio for Alice'),
+('Bob', 'bob@example.com', 'hashed_password_2', 'bob.jpg', 'Bio for Bob'),
+('Charlie', 'charlie@example.com', 'hashed_password_3', 'charlie.jpg', 'Bio for Charlie');
+
+-- Insert into Server
+INSERT INTO Server (name, description, created_by) 
+VALUES 
+('Tech Community', 'A place to discuss tech', 1),
+('Gaming Hub', 'All about gaming', 2);
+
+-- Insert into Channel
+INSERT INTO Channel (server_id, name, channel_type) 
+VALUES 
+(1, 'General', 'text'),
+(1, 'Announcements', 'text'),
+(2, 'Gaming Talk', 'text');
+
+-- Insert into Post
+INSERT INTO Post (user_id, channel_id, title, content) 
+VALUES 
+(1, 1, 'Welcome Post', 'Welcome to the Tech Community!'),
+(2, 2, 'Update', 'New features are coming soon!');
+
+-- Insert into Comment
+INSERT INTO Comment (post_id, user_id, content) 
+VALUES 
+(1, 2, 'Thanks for the warm welcome!'),
+(1, 3, 'Excited to be here!');
+
+-- Insert into Reaction
+INSERT INTO Reaction (user_id, reaction_type) 
+VALUES 
+(1, 'like'),
+(2, 'love');
+
+-- Insert into Message
+INSERT INTO Message (channel_id, user_id, content) 
+VALUES 
+(1, 1, 'Hello everyone!'),
+(2, 2, 'This is an announcement.');
+
+-- Insert into Role
+INSERT INTO Role (server_id, role_name, permissions) 
+VALUES 
+(1, 'Admin', 'all'),
+(2, 'Moderator', 'manage_channels, moderate_messages');
+
+-- Insert into User_Roles
+INSERT INTO User_Roles (user_id, server_id, role_id) 
+VALUES 
+(1, 1, 1),
+(2, 2, 2);
+
+-- Insert into Group
+INSERT INTO `Group` (server_id, name, created_by) 
+VALUES 
+(1, 'Tech Enthusiasts', 1),
+(2, 'Gamers United', 2);
+
+-- Insert into User_Groups
+INSERT INTO User_Groups (user_id, group_id) 
+VALUES 
+(1, 1),
+(2, 2);
+
+-- Insert into Notification
+INSERT INTO Notification (user_id, content) 
+VALUES 
+(1, 'You have a new follower.'),
+(2, 'Your post received a reaction.');
+
+-- Insert into Tag
+INSERT INTO Tag (tag_name) 
+VALUES 
+('Tech'), 
+('Gaming');
+
+-- Insert into Post_Tags
+INSERT INTO Post_Tags (post_id, tag_id) 
+VALUES 
+(1, 1),
+(2, 2);
+
+-- Insert into Blocked_Users
+INSERT INTO Blocked_Users (blocker_id, blocked_id) 
+VALUES 
+(1, 2),
+(3, 1);
+
+-- Insert into Friendship
+INSERT INTO Friendship (user1_id, user2_id, status) 
+VALUES 
+(1, 2, 'accepted'),
+(2, 3, 'pending');
+
+-- Insert into Attachment
+INSERT INTO Attachment (message_id, file_path, file_type) 
+VALUES 
+(1, 'path/to/file.jpg', 'image'),
+(2, 'path/to/document.pdf', 'document');
+
+-- Insert into Poll
+INSERT INTO Poll (post_id, question, expiration_date) 
+VALUES 
+(1, 'What is your favorite programming language?', '2024-12-31 23:59:59');
+
+-- Insert into Poll_Option
+INSERT INTO Poll_Option (poll_id, option_text) 
+VALUES 
+(1, 'Python'),
+(1, 'C++'),
+(1, 'JavaScript');
+
+-- Insert into Poll_Vote
+INSERT INTO Poll_Vote (poll_id, option_id, user_id) 
+VALUES 
+(1, 1, 1),
+(1, 2, 2),
+(1, 3, 3);
+
+
+-- To print the data of a specific table, use this format:
+SELECT * FROM User;
+SELECT * FROM Server;
+SELECT * FROM Channel;
+SELECT * FROM Post;
+SELECT * FROM Comment;
+SELECT * FROM Reaction;
+SELECT * FROM Message;
+SELECT * FROM Role;
+SELECT * FROM User_Roles;
+SELECT * FROM `Group`;
+SELECT * FROM User_Groups;
+SELECT * FROM Notification;
+SELECT * FROM Tag;
+SELECT * FROM Post_Tags;
+SELECT * FROM Blocked_Users;
+SELECT * FROM Friendship;
+SELECT * FROM Attachment;
+SELECT * FROM Poll;
+SELECT * FROM Poll_Option;
+SELECT * FROM Poll_Vote;
+
+--
